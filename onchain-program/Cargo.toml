@@ -1,5 +1,5 @@
 [package]
-name = "solana-data-packer"
+name = "solana-data-packer-onchain-program"
 version = "0.1.0"
 edition = "2021"
 
