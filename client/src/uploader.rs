@@ -22,7 +22,7 @@ use {
  *      - Verify that data on that account matches originally uploaded blob.
  */
 
-pub async fn upload(solana_client: &RpcClient, program_id: &Pubkey, author: Keypair, data: &[u8], _dst: AccountInfo<'_>) -> anyhow::Result<()> {
+pub async fn upload(solana_client: &RpcClient, program_id: &Pubkey, author: &Keypair, data: &[u8]) -> anyhow::Result<()> {
         // Data Bucket Account
         let (state_account_pubkey, _) = Pubkey::find_program_address(
             &[
@@ -51,7 +51,7 @@ pub async fn upload(solana_client: &RpcClient, program_id: &Pubkey, author: Keyp
             .expect("failed to fetch latest blockhash");
 
         let message = Message::new(&[instruction], Some(&author.pubkey()));
-        let transaction = Transaction::new(&[&author], message, latest_blockhash);
+        let transaction = Transaction::new(&[author], message, latest_blockhash);
 
         send_transaction(solana_client, transaction).await?;
         println!("Verification stored at Account: {:?}", state_account_pubkey);
