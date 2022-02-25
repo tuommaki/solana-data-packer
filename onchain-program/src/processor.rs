@@ -60,9 +60,9 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
-        let data_bucket_account = next_account_info(account_info_iter)?;
         let authority_account = next_account_info(account_info_iter)?;
         let payer_account = next_account_info(account_info_iter)?;
+        let data_bucket_account = next_account_info(account_info_iter)?;
 
         let authority_key = *authority_account.signer_key().ok_or_else(|| {
             msg!("Authority account must be a signer");

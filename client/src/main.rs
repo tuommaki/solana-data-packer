@@ -1,8 +1,6 @@
 use {
     clap::{crate_description, crate_name, crate_version, App, Arg},
-    solana_clap_utils::{
-        input_parsers::{keypair_of, value_of},
-    },
+    solana_clap_utils::input_parsers::keypair_of,
     solana_client::rpc_client::RpcClient,
     solana_sdk::pubkey::Pubkey,
     std::fs,
@@ -73,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
     for f in files {
         println!("saving '{}' into solana account", f);
         let f_data = fs::read(f)?;
-        uploader::upload(&client, &program_id, &keypair, f_data.as_ref()).await;
+        uploader::upload(&client, &program_id, &keypair, f_data.as_ref()).await?;
     }
 
     Ok(())

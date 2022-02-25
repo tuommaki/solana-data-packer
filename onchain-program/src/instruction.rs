@@ -7,9 +7,9 @@ pub enum ProgramInstruction {
     /// Create a bucket for data.
     ///
     /// # Account references
-    ///   0. `[WRITE]` Uninitialized data bucket account
-    ///   1. `[SIGNER]` Account used to derive and control the new data bucket.
-    ///   2. `[SIGNER, WRITE]` Account that will fund the new data bucket.
+    ///   0. `[SIGNER]` Account used to derive and control the new data bucket.
+    ///   1. `[SIGNER, WRITE]` Account that will fund the new data bucket.
+    ///   2. `[WRITE]` Uninitialized data bucket account
     ///   3. `[]` System program for CPI.
     CreateBucket {
         /// Data to put into the bucket.
