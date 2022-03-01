@@ -23,7 +23,7 @@ use {
 
 pub async fn upload(solana_client: &RpcClient, program_id: &Pubkey, author: &Keypair, data: &[u8]) -> anyhow::Result<()> {
     // Data Bucket Account
-    let (state_account_pubkey, bump_seed) = Pubkey::find_program_address(
+    let (data_bucket_account_pubkey, bump_seed) = Pubkey::find_program_address(
         &[
         b"solana-data-packer".as_ref(),
         author.pubkey().as_ref(),
@@ -42,9 +42,9 @@ pub async fn upload(solana_client: &RpcClient, program_id: &Pubkey, author: &Key
     let instruction = Instruction {
         program_id: *program_id,
         accounts: vec![
-            AccountMeta::new_readonly(author.pubkey(), true),
             AccountMeta::new(author.pubkey(), true),
-            AccountMeta::new(state_account_pubkey, false),
+            AccountMeta::new(author.pubkey(), true),
+            AccountMeta::new(data_bucket_account_pubkey, false),
             AccountMeta::new_readonly(system_program::id(), false),
         ],
         data: serialized_bucket,
@@ -58,7 +58,7 @@ pub async fn upload(solana_client: &RpcClient, program_id: &Pubkey, author: &Key
     let transaction = Transaction::new(&[author, author], message, latest_blockhash);
 
     send_transaction(solana_client, transaction).await?;
-    println!("Verification stored at Account: {:?}", state_account_pubkey);
+    println!("Verification stored at Account: {:?}", data_bucket_account_pubkey);
     Ok(())
 }
 
