@@ -5,11 +5,12 @@ use {
         clock::Clock,
         entrypoint,
         entrypoint::ProgramResult,
+        msg,
         program::invoke_signed,
         program_error::ProgramError,
-        program_utils::limited_deserialize, pubkey::Pubkey,
+        program_utils::limited_deserialize,
+        pubkey::Pubkey,
         rent::Rent,
-        msg,
         system_instruction,
         sysvar::Sysvar,
     },
@@ -31,22 +32,15 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    match limited_deserialize(instruction_data, SOLANA_PACKET_DATA_SIZE).map_err(|_| { ProgramError::InvalidInstructionData })? {
-        ProgramInstruction::CreateBucket {
-            data,
-            bump_seed,
-        } => Processor::create_bucket(
-            program_id,
-            accounts,
-            data,
-            bump_seed,
-        ),
-        ProgramInstruction::AppendIntoBucket { data } =>
-            Processor::append_into_bucket(
-                program_id,
-                accounts,
-                data,
-            ),
+    match limited_deserialize(instruction_data, SOLANA_PACKET_DATA_SIZE)
+        .map_err(|_| ProgramError::InvalidInstructionData)?
+    {
+        ProgramInstruction::CreateBucket { data, bump_seed } => {
+            Processor::create_bucket(program_id, accounts, data, bump_seed)
+        }
+        ProgramInstruction::AppendIntoBucket { data } => {
+            Processor::append_into_bucket(program_id, accounts, data)
+        }
     }
 }
 
@@ -63,6 +57,7 @@ impl Processor {
         let authority_account = next_account_info(account_info_iter)?;
         let payer_account = next_account_info(account_info_iter)?;
         let data_bucket_account = next_account_info(account_info_iter)?;
+        let system_program_account = next_account_info(account_info_iter)?;
 
         let authority_key = *authority_account.signer_key().ok_or_else(|| {
             msg!("Authority account must be a signer");
@@ -82,9 +77,9 @@ impl Processor {
         // initialized more than once at the same address.
         let derived_data_bucket_key = Pubkey::create_program_address(
             &[
-            b"solana-data-packer".as_ref(),
-            authority_key.as_ref(),
-            &[bump_seed],
+                b"solana-data-packer".as_ref(),
+                authority_key.as_ref(),
+                &[bump_seed],
             ],
             program_id,
         )?;
@@ -137,9 +132,23 @@ impl Processor {
         msg!("creating the data bucket");
 
         invoke_signed(
-            &system_instruction::create_account(&payer_key, &data_bucket_key, required_lamports, data_bucket_len as u64, program_id),
-            &[data_bucket_account.clone()],
-            &[&[b"solana-data-packer", authority_key.as_ref()], &[&[bump_seed]]],
+            &system_instruction::create_account(
+                &payer_key,
+                &data_bucket_key,
+                required_lamports,
+                data_bucket_len as u64,
+                program_id,
+            ),
+            &[
+                data_bucket_account.clone(),
+                // the signer of this forwarded invoke instruction
+                // just so happens to be the same account as the authority_key
+                payer_account.clone(),
+                // we need to account of the program being called
+                system_program_account.clone(),
+            ],
+            // this is as slice of 1 ele which is also a slice
+            &[&[b"solana-data-packer", authority_key.as_ref(), &[bump_seed]]],
         )?;
 
         /*
@@ -155,7 +164,9 @@ impl Processor {
         msg!("storing data on the data bucket account");
 
         // Finally store the data in the bucket.
-        data_bucket_account.serialize_data(&data_bucket).map_err(|_| { ProgramError::InvalidAccountData })
+        data_bucket_account
+            .serialize_data(&data_bucket)
+            .map_err(|_| ProgramError::InvalidAccountData)
     }
 
     fn append_into_bucket(
