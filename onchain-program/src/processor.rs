@@ -113,22 +113,6 @@ impl Processor {
             .max(1)
             .saturating_sub(data_bucket_account.lamports());
 
-        /*
-        msg!("counting lamports");
-
-        if required_lamports > 0 {
-            msg!("transferring required lamports to account");
-            invoke_signed(
-                &system_instruction::transfer(&payer_key, &data_bucket_key, required_lamports),
-                &[
-                    payer_account.clone(),
-                    data_bucket_account.clone(),
-                ],
-               &[&[b"solana-data-packer", payer_key.as_ref()]],
-            )?;
-        }
-        */
-
         msg!("creating the data bucket");
 
         invoke_signed(
@@ -151,16 +135,6 @@ impl Processor {
             &[&[b"solana-data-packer", authority_key.as_ref(), &[bump_seed]]],
         )?;
 
-        /*
-        msg!("assigning the data bucket");
-
-        invoke_signed(
-            &system_instruction::assign(&data_bucket_key, program_id),
-            &[authority_account.clone()],
-            &[&[b"solana-data-packer", authority_key.as_ref()]],
-        )?;
-        */
-
         msg!("storing data on the data bucket account");
 
         // Finally store the data in the bucket.
@@ -171,9 +145,31 @@ impl Processor {
 
     fn append_into_bucket(
         _program_id: &Pubkey,
-        _accounts: &[AccountInfo],
-        _data: Vec<u8>,
+        accounts: &[AccountInfo],
+        data: Vec<u8>,
     ) -> ProgramResult {
-        Ok(())
+        let account_info_iter = &mut accounts.iter();
+
+        let authority_account = next_account_info(account_info_iter)?;
+        let _payer_account = next_account_info(account_info_iter)?;
+        let data_bucket_account = next_account_info(account_info_iter)?;
+        let _system_program_account = next_account_info(account_info_iter)?;
+
+        let mut data_bucket: state::DataBucket = data_bucket_account
+            .deserialize_data()
+            .map_err(|_| ProgramError::InvalidAccountData)?;
+
+        if data_bucket.meta.authority.unwrap() != *authority_account.signer_key().unwrap() {
+            return Err(ProgramError::InvalidArgument);
+        }
+
+        // TODO: Data bucket account should probably be extended?
+
+        data_bucket.data.extend(data);
+        data_bucket.meta.last_updated_slot = Clock::get()?.slot;
+
+        data_bucket_account
+            .serialize_data(&data_bucket)
+            .map_err(|_| ProgramError::InvalidAccountData)
     }
 }

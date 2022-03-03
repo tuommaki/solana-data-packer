@@ -1,6 +1,4 @@
-use {
-    serde::{Deserialize, Serialize},
-};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum ProgramInstruction {
@@ -22,6 +20,12 @@ pub enum ProgramInstruction {
     },
 
     /// Append data into bucket.
+    ///
+    /// # Account references
+    ///   0. `[SIGNER, WRITE]` Account used to control the new data bucket.
+    ///   1. `[SIGNER, WRITE]` Account that will fund the extension of data bucket.
+    ///   2. `[WRITE]` Data bucket account.
+    ///   3. `[]` System program for CPI.
     AppendIntoBucket {
         /// Data to append into the bucket.
         data: Vec<u8>,
