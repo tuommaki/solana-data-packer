@@ -10,8 +10,11 @@ pub enum ProgramInstruction {
     ///   2. `[WRITE]` Uninitialized data bucket account
     ///   3. `[]` System program for CPI.
     CreateBucket {
-        /// Data to put into the bucket.
+        /// Seed data (the first bytes) to put into the bucket.
         data: Vec<u8>,
+
+        /// Total size of data bucket.
+        size: usize,
 
         /// Data buckets are always initialized at program-derived
         /// addresses using the funding address, recent blockhash, and
@@ -19,15 +22,18 @@ pub enum ProgramInstruction {
         bump_seed: u8,
     },
 
-    /// Append data into bucket.
+    /// Put data into bucket.
     ///
     /// # Account references
     ///   0. `[SIGNER, WRITE]` Account used to control the new data bucket.
     ///   1. `[SIGNER, WRITE]` Account that will fund the extension of data bucket.
     ///   2. `[WRITE]` Data bucket account.
     ///   3. `[]` System program for CPI.
-    AppendIntoBucket {
-        /// Data to append into the bucket.
+    PutIntoBucket {
+        /// Data to put into the bucket.
         data: Vec<u8>,
+
+        /// Offset
+        offset: usize,
     },
 }

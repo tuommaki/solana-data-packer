@@ -11,15 +11,7 @@ use {
     },
 };
 
-/*
- * TASKS:
- *  - Split uploaded data into transaction pieces.
- *  - Align derived account computation with on-chain program.
- *  - Implement e2e test:
- *      - Upload multi-piece blob (e.g. 8KB).
- *      - Fetch corresponding Account.
- *      - Verify that data on that account matches originally uploaded blob.
- */
+const MAX_CHUNK_SIZE: usize = 768;
 
 pub async fn upload(
     solana_client: &RpcClient,
@@ -34,6 +26,7 @@ pub async fn upload(
     );
 
     let data = data.to_vec();
+    let total_size = data.len();
     let (mut chunk, mut data) = data.split_at(768);
 
     println!("Saving data to account: {:?}", data_bucket_account_pubkey);
@@ -42,6 +35,7 @@ pub async fn upload(
     let serialized_bucket = bincode::serialize(
         &solana_data_packer_onchain_program::instruction::ProgramInstruction::CreateBucket {
             data: chunk.to_vec(),
+            size: total_size,
             bump_seed,
         },
     )?;
@@ -66,12 +60,20 @@ pub async fn upload(
 
     send_transaction(solana_client, transaction).await?;
 
+    let mut offset = chunk.len();
+
     // Then send rest of the data.
     while !data.is_empty() {
-        (chunk, data) = data.split_at(768);
+        if data.len() > MAX_CHUNK_SIZE {
+            (chunk, data) = data.split_at(MAX_CHUNK_SIZE);
+        } else {
+            chunk = data;
+            data = &[];
+        }
 
-        let serialized_bucket = bincode::serialize(&solana_data_packer_onchain_program::instruction::ProgramInstruction::AppendIntoBucket{
+        let serialized_bucket = bincode::serialize(&solana_data_packer_onchain_program::instruction::ProgramInstruction::PutIntoBucket{
             data: chunk.to_vec(),
+            offset,
         })?;
 
         let instruction = Instruction {
@@ -85,10 +87,15 @@ pub async fn upload(
             data: serialized_bucket,
         };
 
+        let latest_blockhash = solana_client
+            .get_latest_blockhash()
+            .expect("failed to fetch latest blockhash");
+
         let message = Message::new(&[instruction], Some(&author.pubkey()));
         let transaction = Transaction::new(&[author, author], message, latest_blockhash);
 
         send_transaction(solana_client, transaction).await?;
+        offset += chunk.len();
     }
 
     println!(

@@ -35,11 +35,13 @@ pub fn process_instruction(
     match limited_deserialize(instruction_data, SOLANA_PACKET_DATA_SIZE)
         .map_err(|_| ProgramError::InvalidInstructionData)?
     {
-        ProgramInstruction::CreateBucket { data, bump_seed } => {
-            Processor::create_bucket(program_id, accounts, data, bump_seed)
-        }
-        ProgramInstruction::AppendIntoBucket { data } => {
-            Processor::append_into_bucket(program_id, accounts, data)
+        ProgramInstruction::CreateBucket {
+            data,
+            size,
+            bump_seed,
+        } => Processor::create_bucket(program_id, accounts, data, size, bump_seed),
+        ProgramInstruction::PutIntoBucket { data, offset } => {
+            Processor::put_into_bucket(program_id, accounts, data, offset)
         }
     }
 }
@@ -50,6 +52,7 @@ impl Processor {
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         data: Vec<u8>,
+        size: usize,
         bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -96,7 +99,7 @@ impl Processor {
         }
 
         let current_slot = Clock::get()?.slot;
-        let data_bucket_len = 72 + data.len();
+        let data_bucket_len = 72 + size;
         let data_bucket = state::DataBucket {
             meta: state::DataBucketMeta {
                 last_updated_slot: current_slot,
@@ -143,10 +146,11 @@ impl Processor {
             .map_err(|_| ProgramError::InvalidAccountData)
     }
 
-    fn append_into_bucket(
+    fn put_into_bucket(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
         data: Vec<u8>,
+        offset: usize,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
@@ -163,9 +167,12 @@ impl Processor {
             return Err(ProgramError::InvalidArgument);
         }
 
-        // TODO: Data bucket account should probably be extended?
+        // Ensure there's enough space for new data.
+        if data_bucket.data.len() < (offset + data.len()) {
+            data_bucket.data.resize(offset + data.len(), 0);
+        }
 
-        data_bucket.data.extend(data);
+        data_bucket.data[offset..].copy_from_slice(data.as_ref());
         data_bucket.meta.last_updated_slot = Clock::get()?.slot;
 
         data_bucket_account
