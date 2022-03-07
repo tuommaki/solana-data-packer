@@ -1,6 +1,9 @@
 #[allow(unused_imports)]
 use {
-    crate::{instruction::ProgramInstruction, state},
+    crate::{
+        instruction::{parse_program_instruction, ProgramInstruction},
+        state,
+    },
     solana_program::{
         account_info::{next_account_info, AccountInfo},
         clock::Clock,
@@ -25,7 +28,7 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    match ProgramInstruction::parse(instruction_data)? {
+    match parse_program_instruction(instruction_data)? {
         ProgramInstruction::CreateBucket {
             data,
             size,

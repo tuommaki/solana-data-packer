@@ -109,21 +109,23 @@ fn create_bucket(input: &[u8]) -> IResult<&[u8], ProgramInstruction> {
     ))
 }
 
-impl ProgramInstruction<'_> {
-    pub fn parse<'a>(instruction_data: &'a [u8]) -> Result<Self, ProgramError> {
-        let (rest, it) = instruction_type(instruction_data).finish().unwrap();
-        match it {
-            InstructionType::CreateBucket => {
-                let (_, bucket) = create_bucket(rest).unwrap();
-                Ok(bucket)
-            }
-            InstructionType::PutIntoBucket => Ok(ProgramInstruction::PutIntoBucket {
-                data: &[],
-                offset: 0,
-            }),
+pub fn parse_program_instruction<'a>(
+    instruction_data: &'a [u8],
+) -> Result<ProgramInstruction, ProgramError> {
+    let (rest, it) = instruction_type(instruction_data).finish().unwrap();
+    match it {
+        InstructionType::CreateBucket => {
+            let (_, bucket) = create_bucket(rest).unwrap();
+            Ok(bucket)
         }
+        InstructionType::PutIntoBucket => Ok(ProgramInstruction::PutIntoBucket {
+            data: &[],
+            offset: 0,
+        }),
     }
+}
 
+impl ProgramInstruction<'_> {
     pub fn serialize(&self) -> &[u8] {
         &[]
     }
