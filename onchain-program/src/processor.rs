@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use {
     crate::{instruction::ProgramInstruction, state},
     solana_program::{
@@ -16,14 +17,6 @@ use {
     },
 };
 
-// Following copied from solana/sdk/src/packet.rs:
-//
-/// Maximum over-the-wire size of a Transaction
-///   1280 is IPv6 minimum MTU
-///   40 bytes is the size of the IPv6 header
-///   8 bytes is the size of the fragment header
-pub const SOLANA_PACKET_DATA_SIZE: u64 = 1280 - 40 - 8;
-
 // Declare and export the program's entrypoint.
 entrypoint!(process_instruction);
 
@@ -32,16 +25,14 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    match limited_deserialize(instruction_data, SOLANA_PACKET_DATA_SIZE)
-        .map_err(|_| ProgramError::InvalidInstructionData)?
-    {
+    match ProgramInstruction::parse(instruction_data)? {
         ProgramInstruction::CreateBucket {
             data,
             size,
             bump_seed,
-        } => Processor::create_bucket(program_id, accounts, data, size, bump_seed),
+        } => Processor::create_bucket(program_id, accounts, data, size as usize, bump_seed),
         ProgramInstruction::PutIntoBucket { data, offset } => {
-            Processor::put_into_bucket(program_id, accounts, data, offset)
+            Processor::put_into_bucket(program_id, accounts, data, offset as usize)
         }
     }
 }
@@ -51,7 +42,7 @@ impl Processor {
     fn create_bucket(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        data: Vec<u8>,
+        data: &[u8],
         size: usize,
         bump_seed: u8,
     ) -> ProgramResult {
@@ -149,7 +140,7 @@ impl Processor {
     fn put_into_bucket(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
-        data: Vec<u8>,
+        data: &[u8],
         offset: usize,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -159,6 +150,7 @@ impl Processor {
         let data_bucket_account = next_account_info(account_info_iter)?;
         let _system_program_account = next_account_info(account_info_iter)?;
 
+        /*
         let mut data_bucket: state::DataBucket = data_bucket_account
             .deserialize_data()
             .map_err(|_| ProgramError::InvalidAccountData)?;
@@ -178,5 +170,7 @@ impl Processor {
         data_bucket_account
             .serialize_data(&data_bucket)
             .map_err(|_| ProgramError::InvalidAccountData)
+        */
+        Ok(())
     }
 }
