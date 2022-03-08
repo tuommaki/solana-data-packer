@@ -99,7 +99,7 @@ impl Processor {
                 last_updated_slot: current_slot,
                 authority: Some(authority_key),
             },
-            data,
+            data: data.to_vec(),
         };
 
         msg!("constructed data bucket object");
@@ -153,7 +153,6 @@ impl Processor {
         let data_bucket_account = next_account_info(account_info_iter)?;
         let _system_program_account = next_account_info(account_info_iter)?;
 
-        /*
         let mut data_bucket: state::DataBucket = data_bucket_account
             .deserialize_data()
             .map_err(|_| ProgramError::InvalidAccountData)?;
@@ -172,8 +171,8 @@ impl Processor {
 
         data_bucket_account
             .serialize_data(&data_bucket)
-            .map_err(|_| ProgramError::InvalidAccountData)
-        */
+            .map_err(|_| ProgramError::InvalidAccountData)?;
+
         Ok(())
     }
 }

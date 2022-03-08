@@ -96,17 +96,23 @@ fn be_u32(input: &[u8]) -> IResult<&[u8], u32> {
 }
 
 fn create_bucket(input: &[u8]) -> IResult<&[u8], ProgramInstruction> {
-    let (rest, size) = be_u32(input)?;
+    let (input, size) = be_u32(input)?;
     let (data, bump_seed) = take(1usize)(input)?;
 
     Ok((
-        rest,
+        data,
         ProgramInstruction::CreateBucket {
             data,
             size,
             bump_seed: bump_seed[0],
         },
     ))
+}
+
+fn put_into_bucket(input: &[u8]) -> IResult<&[u8], ProgramInstruction> {
+    let (data, offset) = be_u32(input)?;
+
+    Ok((data, ProgramInstruction::PutIntoBucket { data, offset }))
 }
 
 pub fn parse_program_instruction<'a>(
@@ -118,15 +124,68 @@ pub fn parse_program_instruction<'a>(
             let (_, bucket) = create_bucket(rest).unwrap();
             Ok(bucket)
         }
-        InstructionType::PutIntoBucket => Ok(ProgramInstruction::PutIntoBucket {
-            data: &[],
-            offset: 0,
-        }),
+        InstructionType::PutIntoBucket => {
+            let (_, bucket) = put_into_bucket(rest).unwrap();
+            Ok(bucket)
+        }
     }
 }
 
 impl ProgramInstruction<'_> {
-    pub fn serialize(&self) -> &[u8] {
-        &[]
+    pub fn serialize(&self) -> Vec<u8> {
+        match self {
+            Self::CreateBucket {
+                data,
+                size,
+                bump_seed,
+            } => [
+                &[InstructionType::CreateBucket as u8],
+                size.to_be_bytes().as_slice(),
+                &[*bump_seed],
+                data,
+            ]
+            .concat()
+            .to_vec(),
+            Self::PutIntoBucket { data, offset } => [
+                &[InstructionType::PutIntoBucket as u8],
+                offset.to_be_bytes().as_slice(),
+                data,
+            ]
+            .concat()
+            .to_vec(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_serialize_and_deserialize_create() {
+        let orig = ProgramInstruction::CreateBucket {
+            data: &[1, 2, 3, 4, 5, 6],
+            size: 80,
+            bump_seed: 42,
+        };
+
+        let bs = orig.serialize();
+        let new = parse_program_instruction(bs.as_ref()).unwrap();
+
+        assert_eq!(orig, new);
+    }
+
+    #[test]
+    fn test_serialize_and_deserialize_putinto() {
+        let orig = ProgramInstruction::PutIntoBucket {
+            data: &[7, 8, 9, 10, 11, 12],
+            offset: 6,
+        };
+
+        let bs = orig.serialize();
+        let new = parse_program_instruction(bs.as_ref()).unwrap();
+
+        assert_eq!(orig, new);
     }
 }

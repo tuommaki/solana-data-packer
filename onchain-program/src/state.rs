@@ -4,9 +4,9 @@ use {
 };
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub(crate) struct DataBucket<'a> {
+pub(crate) struct DataBucket {
     pub meta: DataBucketMeta,
-    pub data: &'a [u8],
+    pub data: Vec<u8>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

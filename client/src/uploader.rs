@@ -32,13 +32,11 @@ pub async fn upload(
     println!("Saving data to account: {:?}", data_bucket_account_pubkey);
 
     // First create the data bucket.
-    let serialized_bucket = bincode::serialize(
-        &solana_data_packer_onchain_program::instruction::ProgramInstruction::CreateBucket {
-            data: chunk.to_vec(),
-            size: total_size,
+    let serialized_bucket = solana_data_packer_onchain_program::instruction::ProgramInstruction::CreateBucket {
+            data: chunk,
+            size: total_size as u32,
             bump_seed,
-        },
-    )?;
+        }.serialize();
 
     let instruction = Instruction {
         program_id: *program_id,
@@ -71,10 +69,10 @@ pub async fn upload(
             data = &[];
         }
 
-        let serialized_bucket = bincode::serialize(&solana_data_packer_onchain_program::instruction::ProgramInstruction::PutIntoBucket{
-            data: chunk.to_vec(),
-            offset,
-        })?;
+        let serialized_bucket = solana_data_packer_onchain_program::instruction::ProgramInstruction::PutIntoBucket{
+            data: chunk,
+            offset: offset as u32,
+        }.serialize();
 
         let instruction = Instruction {
             program_id: *program_id,

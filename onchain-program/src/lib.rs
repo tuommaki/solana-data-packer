@@ -1,3 +1,5 @@
+#![feature(array_methods)]
+
 pub mod instruction;
 
 mod processor;
