@@ -17,6 +17,7 @@ pub async fn upload(
     solana_client: &RpcClient,
     program_id: &Pubkey,
     author: &Keypair,
+    payer: &Keypair,
     data: &[u8],
 ) -> anyhow::Result<()> {
     // Data Bucket Account
@@ -42,7 +43,7 @@ pub async fn upload(
         program_id: *program_id,
         accounts: vec![
             AccountMeta::new(author.pubkey(), true),
-            AccountMeta::new(author.pubkey(), true),
+            AccountMeta::new(payer.pubkey(), true),
             AccountMeta::new(data_bucket_account_pubkey, false),
             AccountMeta::new_readonly(system_program::id(), false),
         ],
@@ -54,7 +55,7 @@ pub async fn upload(
         .expect("failed to fetch latest blockhash");
 
     let message = Message::new(&[instruction], Some(&author.pubkey()));
-    let transaction = Transaction::new(&[author, author], message, latest_blockhash);
+    let transaction = Transaction::new(&[author, payer], message, latest_blockhash);
 
     send_transaction(solana_client, transaction).await?;
 
@@ -78,7 +79,7 @@ pub async fn upload(
             program_id: *program_id,
             accounts: vec![
                 AccountMeta::new(author.pubkey(), true),
-                AccountMeta::new(author.pubkey(), true),
+                AccountMeta::new(payer.pubkey(), true),
                 AccountMeta::new(data_bucket_account_pubkey, false),
                 AccountMeta::new_readonly(system_program::id(), false),
             ],
@@ -90,7 +91,7 @@ pub async fn upload(
             .expect("failed to fetch latest blockhash");
 
         let message = Message::new(&[instruction], Some(&author.pubkey()));
-        let transaction = Transaction::new(&[author, author], message, latest_blockhash);
+        let transaction = Transaction::new(&[author, payer], message, latest_blockhash);
 
         send_transaction(solana_client, transaction).await?;
         offset += chunk.len();

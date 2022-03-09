@@ -37,17 +37,22 @@ async fn main() -> anyhow::Result<()> {
             .help("Solana Data Bucket on-chain program ID")
         )
         .arg(
-            Arg::with_name("keypair")
-                .long("keypair")
-                .value_name("KEYPAIR")
+            Arg::with_name("author")
+                .long("author")
                 .takes_value(true)
                 .required(true)
-                .help("Solana signer keypair path"),
+                .help("Solana author keypair path"),
+        )
+        .arg(
+            Arg::with_name("payer")
+                .long("payer")
+                .takes_value(true)
+                .required(true)
+                .help("Solana payer keypair path"),
         )
         .arg(
             Arg::with_name("json_rpc_url")
                 .long("url")
-                .value_name("URL")
                 .takes_value(true)
                 .default_value("http://127.0.0.1:8899")
                 .help("JSON RPC URL for the Solana cluster.  Default from the configuration file."),
@@ -64,14 +69,15 @@ async fn main() -> anyhow::Result<()> {
 
     let url = matches.value_of("json_rpc_url").unwrap();
     let client = RpcClient::new(url.to_string());
-    let keypair = keypair_of(&matches, "keypair").expect("invalid solana keypair");
+    let author = keypair_of(&matches, "author").expect("invalid solana author keypair");
+    let payer = keypair_of(&matches, "payer").expect("invalid solana payer keypair");
     let program_id = Pubkey::from_str(matches.value_of("program_id").unwrap()).unwrap();
     let files: Vec<&str> = matches.values_of("files").unwrap().collect();
 
     for f in files {
         println!("saving '{}' into solana account", f);
         let f_data = fs::read(f)?;
-        uploader::upload(&client, &program_id, &keypair, f_data.as_ref()).await?;
+        uploader::upload(&client, &program_id, &author, &payer, f_data.as_ref()).await?;
     }
 
     Ok(())
