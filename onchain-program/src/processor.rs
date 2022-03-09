@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use {
     crate::{
         instruction::{parse_program_instruction, ProgramInstruction},
@@ -12,7 +11,6 @@ use {
         msg,
         program::invoke_signed,
         program_error::ProgramError,
-        program_utils::limited_deserialize,
         pubkey::Pubkey,
         rent::Rent,
         system_instruction,
