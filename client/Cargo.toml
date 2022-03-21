@@ -1,0 +1,21 @@
+[package]
+name = "solana-data-packer-client"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+anyhow = "1.0.52"
+bincode = "1.3.3"
+clap = { version = "2.33.1" }
+serde = { version = "1.0.130", features = ["derive"] }
+solana-clap-utils = "1.9.8"
+solana-cli-config = "1.9.8"
+solana-client = "1.9.8"
+solana-program = "1.9.8"
+solana-sdk = "1.9.8"
+tokio = { version = "1.8", features = ["full"] }
+url = "2.2.2"
+
+solana-data-packer-onchain-program = { path = "../onchain-program" }
+
